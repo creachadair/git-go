@@ -1,3 +1,5 @@
+// Copyright (C) 2016 Michael J. Fromberger. All Rights Reserved.
+
 // Program git-go is a Git plugin that adds some helpful behaviour for
 // repositories containing Go code.
 package main
