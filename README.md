@@ -4,6 +4,8 @@ http://godoc.org/github.com/creachadair/git-go
 
 This repository provides a plugin for Git to handle some common Go development tasks.
 
+Warning: This works, but is kind of a hack.
+
 ## Installation
 
 ```
