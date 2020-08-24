@@ -88,6 +88,8 @@ func run() error {
 	root, err := moduleRoot()
 	if err != nil {
 		return err
+	} else if err := os.Chdir(root); err != nil {
+		return err
 	}
 	args := flag.Args()
 	if len(args) >= 1 {
