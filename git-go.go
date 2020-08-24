@@ -85,7 +85,7 @@ func run() error {
 		return nil
 	}
 
-	root, err := rootDir()
+	root, err := moduleRoot()
 	if err != nil {
 		return err
 	}
@@ -149,6 +149,20 @@ func run() error {
 	return nil
 }
 
+// moduleRoot returns the module root for the current package.  If the go tool
+// cannot find one, it delegates to rootDir.
+func moduleRoot() (string, error) {
+	mod, err := exec.Command("go", "env", "GOMOD").Output()
+	if err != nil {
+		path := strings.TrimSpace(string(mod))
+		if path != "/dev/null" {
+			return filepath.Dir(path), nil
+		}
+	}
+	return rootDir()
+}
+
+// rootDir returns the root directory for the current repository.
 func rootDir() (string, error) {
 	data, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
 	return strings.TrimSpace(string(data)), err
