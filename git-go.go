@@ -155,7 +155,7 @@ func run() error {
 // cannot find one, it delegates to rootDir.
 func moduleRoot() (string, error) {
 	mod, err := exec.Command("go", "env", "GOMOD").Output()
-	if err != nil {
+	if err == nil {
 		path := strings.TrimSpace(string(mod))
 		if path != "/dev/null" {
 			return filepath.Dir(path), nil
