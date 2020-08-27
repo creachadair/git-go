@@ -29,18 +29,17 @@ Subcommands:
   test, tests   : run "go test" over all packages
   vet           : run "go vet" over all packages
   fmt, format   : run "gofmt -s" over all packages
-  lint          : run "golint" over all packages (if installed)
   static        : run "staticheck" over all packages (if installed)
   check         : run all the above checks
 
-  install-tools : install external commands (staticcheck, golint)
+  install-tools : install external commands (staticcheck)
 
   install-hook [subcommand]
                 : install pre-push hook in the current repo.
                   subcommand defaults to "presubmit"
 
 Set GITGO_<tag>=warn to convert failures into warnings, where tag is one of
-  TEST, VET, LINT, FMT, STATIC
+  TEST, VET, FMT, STATIC
 
 When using "presubmit" or "check", additional arguments are added to or removed
 from the base set, e.g., "presubmit static" means fmt, test, vet, and static,
@@ -96,7 +95,7 @@ func run() error {
 		fix := args[1:]
 		switch args[0] {
 		case "check":
-			args = []string{"fmt", "test", "vet", "lint", "static"}
+			args = []string{"fmt", "test", "vet", "static"}
 		case "presubmit":
 			args = []string{"fmt", "test", "vet"}
 		}
@@ -113,9 +112,6 @@ func run() error {
 
 			case "vet":
 				return check("vet", invoke(runVet(root)))
-
-			case "lint":
-				return check("lint", invoke(runLint(root)))
 
 			case "static":
 				return check("static", invoke(runStatic(root)))
@@ -184,8 +180,6 @@ func runTests(path string) *exec.Cmd { return gocmd(path, "test", "-race", "-cpu
 
 func runVet(path string) *exec.Cmd { return gocmd(path, "vet", "./...") }
 
-func runLint(path string) *exec.Cmd { return runcmd("golint", path, "-set_exit_status", "./...") }
-
 func runStatic(path string) *exec.Cmd { return runcmd("staticcheck", path, "./...") }
 
 func runFumpt(path string) *exec.Cmd {
@@ -233,7 +227,6 @@ git go %s
 
 func installTools() error {
 	for _, tool := range []string{
-		"golang.org/x/lint/golint",
 		"honnef.co/go/tools/cmd/staticcheck@2020.1.5",
 	} {
 		cmd := exec.Command("go", "get", "-u", tool)
