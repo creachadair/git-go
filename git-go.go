@@ -27,6 +27,7 @@ Helpful additions for writing and maintaining Go code.
 Subcommands:
   presubmit     : run "gofmt", "go test", and "go vet" over all packages
   test, tests   : run "go test" over all packages
+  test-once     : as "test", but limited to one CPU setting
   vet           : run "go vet" over all packages
   fmt, format   : run "gofmt -s" over all packages
   static        : run "staticheck" over all packages (if installed)
@@ -110,6 +111,9 @@ func run() error {
 			case "test", "tests":
 				return check("test", invoke(runTests(root)))
 
+			case "test-once":
+				return check("test", invoke(runTestsOnce(root)))
+
 			case "vet":
 				return check("vet", invoke(runVet(root)))
 
@@ -177,6 +181,8 @@ func runcmd(bin, dir string, args ...string) *exec.Cmd {
 }
 
 func runTests(path string) *exec.Cmd { return gocmd(path, "test", "-race", "-cpu=1,2", "./...") }
+
+func runTestsOnce(path string) *exec.Cmd { return gocmd(path, "test", "-race", "-cpu=2", "./...") }
 
 func runVet(path string) *exec.Cmd { return gocmd(path, "vet", "./...") }
 
