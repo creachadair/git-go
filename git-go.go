@@ -39,6 +39,9 @@ Subcommands:
                 : install pre-push hook in the current repo.
                   subcommand defaults to "presubmit"
 
+  install-presubmit-workflow
+                : install presubmit workflow config in the current repo.
+
 Set GITGO_<tag>=warn to convert failures into warnings, where tag is one of
   TEST, VET, FMT, STATIC
 
@@ -80,6 +83,8 @@ func run() error {
 		}
 	} else if flag.Arg(0) == "install-tools" {
 		return installTools()
+	} else if flag.Arg(0) == "install-presubmit-workflow" {
+		return installPresubmitWorkflow()
 	} else if flag.Arg(0) == "help" {
 		flag.Usage()
 		return nil
@@ -274,4 +279,45 @@ func update(args *[]string, arg string) {
 		}
 	}
 	*args = append(*args, trim)
+}
+
+const presubmitConfig = `name: Go presubmit
+
+on:
+  push:
+    branches:
+      - default
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  build:
+    name: Go presubmit
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.15']
+    steps:
+    - name: Install Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go-version }}
+    - uses: actions/checkout@v2
+    - uses: creachadair/go-presubmit-action@default
+`
+
+func installPresubmitWorkflow() error {
+	path := filepath.Join(".github/workflows/go-presubmit.yml")
+	if _, err := os.Stat(path); err == nil {
+		return errors.New("presubmit workflow is already installed")
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(path, []byte(presubmitConfig), 0644); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Installed Go presubmit workflow at %q\n", path)
+	fmt.Fprintln(out, "You must commit and push this file to enable the workflow")
+	return nil
 }
