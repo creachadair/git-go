@@ -293,10 +293,11 @@ on:
 jobs:
   build:
     name: Go presubmit
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         go-version: ['1.15']
+        os: ['ubuntu-latest']
     steps:
     - name: Install Go ${{ matrix.go-version }}
       uses: actions/setup-go@v1
