@@ -296,7 +296,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        go-version: ['1.15']
+        go-version: ['1.16']
         os: ['ubuntu-latest']
     steps:
     - name: Install Go ${{ matrix.go-version }}
