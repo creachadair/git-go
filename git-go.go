@@ -240,7 +240,7 @@ func installTools() error {
 	for _, tool := range []string{
 		"honnef.co/go/tools/cmd/staticcheck@2021.1",
 	} {
-		cmd := exec.Command("go", "get", "-u", tool)
+		cmd := exec.Command("go", "install", tool)
 		cmd.Dir = os.TempDir()
 		cmd.Env = append(os.Environ(), "GO111MODULE=on")
 		fmt.Fprintf(out, "[INSTALL] %s\n", tool)
