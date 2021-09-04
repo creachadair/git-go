@@ -238,7 +238,7 @@ git go %s
 
 func installTools() error {
 	for _, tool := range []string{
-		"honnef.co/go/tools/cmd/staticcheck@2021.1",
+		"honnef.co/go/tools/cmd/staticcheck@2021.1.1",
 	} {
 		cmd := exec.Command("go", "install", tool)
 		cmd.Dir = os.TempDir()
