@@ -9,8 +9,8 @@ Warning: This works, but is kind of a hack.
 
 ## Installation
 
-```
-(cd /tmp; go get github.com/creachadair/git-go)
+```bash
+go install github.com/creachadair/git-go@latest
 ```
 
 ## Basic Usage Examples
