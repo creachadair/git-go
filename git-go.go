@@ -14,9 +14,15 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/creachadair/ctrl"
 )
 
-var out = os.Stdout
+var (
+	modDirs = flag.String("mod", "", "Module paths relative to repository root")
+
+	out = os.Stdout
+)
 
 func init() {
 	flag.Usage = func() {
@@ -49,21 +55,33 @@ When using "presubmit" or "check", additional arguments are added to or removed
 from the base set, e.g., "presubmit static" means fmt, test, vet, and static,
 while "check -vet" means all the tests except vet.
 
+If the main module has submodules, use the -mod flag to list the path to each
+module subdirectory, relative to the main module. Multiple modules can be listed
+separated by commas.
+
+Options:
 `)
 		flag.PrintDefaults()
 	}
 }
 func main() {
-	if err := run(); err != nil {
-		log.Fatal("Error: ", err)
-	}
+	flag.Parse()
+	ctrl.Run(gitgo)
 }
 
-func run() error {
-	flag.Parse()
+func gitgo() error {
 	if flag.NArg() == 0 {
 		return errors.New("no subcommand specified")
-	} else if flag.Arg(0) == "install-hook" {
+	}
+
+	// We always check the main module, plus paths from the -mod flag.
+	mods := []string{"."}
+	if *modDirs != "" {
+		mods = append(mods, strings.Split(*modDirs, ",")...)
+	}
+
+	// Special cases: Install hooks, fetch tools, etc.
+	if flag.Arg(0) == "install-hook" {
 		root, err := rootDir()
 		if err != nil {
 			return err
@@ -75,7 +93,7 @@ func run() error {
 		hookdir := filepath.Join(root, ".git", "hooks")
 		prepush := filepath.Join(hookdir, "pre-push")
 		if _, err := os.Stat(prepush); os.IsNotExist(err) {
-			return writeHook(prepush, subcommand)
+			return writeHook(prepush, subcommand, mods)
 		} else if err == nil {
 			return fmt.Errorf("pre-push hook already exists")
 		} else {
@@ -90,6 +108,7 @@ func run() error {
 		return nil
 	}
 
+	// Reaching here, we have checking to do.
 	root, err := moduleRoot()
 	if err != nil {
 		return err
@@ -110,44 +129,50 @@ func run() error {
 		}
 	}
 	var nerr int
-	for _, arg := range args {
-		err := func() error {
-			switch arg {
-			case "test", "tests":
-				return check("test", invoke(runTests(root)))
+	for _, mod := range mods {
+		if _, err := os.Stat(filepath.Join(mod, "go.mod")); err != nil {
+			return fmt.Errorf("no module in %q: %w", mod, err)
+		}
+		fmt.Fprintf(out, "🛠  \033[1;97mChecking module %q\033[0m\n", mod)
+		for _, arg := range args {
+			err := func() error {
+				switch arg {
+				case "test", "tests":
+					return check("test", invoke(runTests(mod)))
 
-			case "test-once":
-				return check("test", invoke(runTestsOnce(root)))
+				case "test-once":
+					return check("test", invoke(runTestsOnce(mod)))
 
-			case "vet":
-				return check("vet", invoke(runVet(root)))
+				case "vet":
+					return check("vet", invoke(runVet(mod)))
 
-			case "static":
-				return check("static", invoke(runStatic(root)))
+				case "static":
+					return check("static", invoke(runStatic(mod)))
 
-			case "presubmit":
-				fumpt := check("fmt", invoke(runFumpt(root)))
-				test := check("test", invoke(runTests(root)))
-				vet := check("vet", invoke(runVet(root)))
-				if fumpt != nil {
-					return fumpt
-				} else if test != nil {
-					return test
-				} else if vet != nil {
-					return vet
+				case "presubmit":
+					fumpt := check("fmt", invoke(runFumpt(mod)))
+					test := check("test", invoke(runTests(mod)))
+					vet := check("vet", invoke(runVet(mod)))
+					if fumpt != nil {
+						return fumpt
+					} else if test != nil {
+						return test
+					} else if vet != nil {
+						return vet
+					}
+
+				case "fmt", "format":
+					return check("fmt", invoke(runFumpt(mod)))
+
+				default:
+					return fmt.Errorf("subcommand %q not understood", arg)
 				}
-
-			case "fmt", "format":
-				return check("fmt", invoke(runFumpt(root)))
-
-			default:
-				return fmt.Errorf("subcommand %q not understood", arg)
+				return nil
+			}()
+			if err != nil {
+				log.Printf("Error: %v", err)
+				nerr++
 			}
-			return nil
-		}()
-		if err != nil {
-			log.Printf("Error: %v", err)
-			nerr++
 		}
 	}
 	if nerr > 0 {
@@ -226,12 +251,16 @@ func invoke(cmd *exec.Cmd) error {
 	return err
 }
 
-func writeHook(path, subcommand string) error {
+func writeHook(path, subcommand string, mods []string) error {
+	var modFlag string
+	if len(mods) > 1 {
+		modFlag = "-mod '" + strings.Join(mods, ",") + "'"
+	}
 	content := fmt.Sprintf(`#!/bin/sh
 #
 # Verify that the code is in a useful state before pushing.
-git go %s
-`, subcommand)
+git go %s%s
+`, modFlag, subcommand)
 
 	return ioutil.WriteFile(path, []byte(content), 0755)
 }
