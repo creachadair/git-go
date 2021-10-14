@@ -55,9 +55,9 @@ When using "presubmit" or "check", additional arguments are added to or removed
 from the base set, e.g., "presubmit static" means fmt, test, vet, and static,
 while "check -vet" means all the tests except vet.
 
-If the main module has submodules, use the -mod flag to list the path to each
-module subdirectory, relative to the main module. Multiple modules can be listed
-separated by commas.
+By default, all submodules are checked. To check only specific submodules, set
+the -mod flag to a comma-separated list of subdirectories of the main module.
+To check only the main module, set -mod="."
 
 Options:
 `)
@@ -353,7 +353,7 @@ func installPresubmitWorkflow() error {
 
 func findSubmodules(root, modFlag string) ([]string, error) {
 	mods := []string{"."}
-	if modFlag == "" {
+	if modFlag == "" || modFlag == "." {
 		return mods, nil
 	} else if modFlag != "auto" {
 		return append(mods, strings.Split(modFlag, ",")...), nil
