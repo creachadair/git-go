@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	modDirs = flag.String("mod", "", "Module paths relative to repository root")
+	modDirs = flag.String("mod", "auto", "Module paths relative to repository root")
 
 	out = os.Stdout
 )
@@ -74,12 +74,6 @@ func gitgo() error {
 		return errors.New("no subcommand specified")
 	}
 
-	// We always check the main module, plus paths from the -mod flag.
-	mods := []string{"."}
-	if *modDirs != "" {
-		mods = append(mods, strings.Split(*modDirs, ",")...)
-	}
-
 	// Special cases: Install hooks, fetch tools, etc.
 	if flag.Arg(0) == "install-hook" {
 		root, err := rootDir()
@@ -93,7 +87,7 @@ func gitgo() error {
 		hookdir := filepath.Join(root, ".git", "hooks")
 		prepush := filepath.Join(hookdir, "pre-push")
 		if _, err := os.Stat(prepush); os.IsNotExist(err) {
-			return writeHook(prepush, subcommand, mods)
+			return writeHook(prepush, subcommand, *modDirs)
 		} else if err == nil {
 			return fmt.Errorf("pre-push hook already exists")
 		} else {
@@ -115,6 +109,11 @@ func gitgo() error {
 	} else if err := os.Chdir(root); err != nil {
 		return err
 	}
+	mods, err := findSubmodules(root, *modDirs)
+	if err != nil {
+		return err
+	}
+
 	args := flag.Args()
 	if len(args) >= 1 {
 		fix := args[1:]
@@ -251,16 +250,16 @@ func invoke(cmd *exec.Cmd) error {
 	return err
 }
 
-func writeHook(path, subcommand string, mods []string) error {
-	var modFlag string
-	if len(mods) > 1 {
-		modFlag = "-mod '" + strings.Join(mods, ",") + "'"
+func writeHook(path, subcommand, modFlag string) error {
+	var insert string
+	if modFlag != "" && modFlag != "auto" {
+		insert = "-mod '" + modFlag + "' "
 	}
 	content := fmt.Sprintf(`#!/bin/sh
 #
 # Verify that the code is in a useful state before pushing.
 git go %s%s
-`, modFlag, subcommand)
+`, insert, subcommand)
 
 	return ioutil.WriteFile(path, []byte(content), 0755)
 }
@@ -350,4 +349,25 @@ func installPresubmitWorkflow() error {
 	fmt.Fprintf(out, "Installed Go presubmit workflow at %q\n", path)
 	fmt.Fprintln(out, "You must commit and push this file to enable the workflow")
 	return nil
+}
+
+func findSubmodules(root, modFlag string) ([]string, error) {
+	mods := []string{"."}
+	if modFlag == "" {
+		return mods, nil
+	} else if modFlag != "auto" {
+		return append(mods, strings.Split(modFlag, ",")...), nil
+	}
+	if err := filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
+		if fi.Mode().IsRegular() && fi.Name() == "go.mod" {
+			dir := filepath.Dir(path)
+			if dir != root {
+				mods = append(mods, strings.TrimPrefix(dir, root+"/"))
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return mods, nil
 }
