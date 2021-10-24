@@ -317,6 +317,7 @@ on:
       - default
   pull_request:
     types: [opened, reopened, synchronize]
+  workflow_dispatch:
 
 jobs:
   build:
