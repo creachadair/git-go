@@ -8,7 +8,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -261,7 +260,7 @@ func writeHook(path, subcommand, modFlag string) error {
 git go %s%s
 `, insert, subcommand)
 
-	return ioutil.WriteFile(path, []byte(content), 0755)
+	return os.WriteFile(path, []byte(content), 0755)
 }
 
 func installTools() error {
@@ -344,7 +343,7 @@ func installPresubmitWorkflow() error {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(path, []byte(presubmitConfig), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(presubmitConfig), 0644); err != nil {
 		return err
 	}
 	fmt.Fprintf(out, "Installed Go presubmit workflow at %q\n", path)
