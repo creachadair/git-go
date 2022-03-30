@@ -145,11 +145,6 @@ func gitgo() error {
 					return check("vet", invoke(runVet(mod)))
 
 				case "static":
-					if isGo118() {
-						fmt.Fprintf(out, "▷ \033[1;36m%s\033[0m\n", "staticcheck")
-						fmt.Fprintf(out, "\033[50C\033[1;33mSKIPPED\033[0m (Go 1.18 is not supported yet)\n")
-						return nil
-					}
 					return check("static", invoke(runStatic(mod)))
 
 				case "presubmit":
@@ -270,7 +265,7 @@ git go %s%s
 
 func installTools() error {
 	for _, tool := range []string{
-		"honnef.co/go/tools/cmd/staticcheck@2021.1.2",
+		"honnef.co/go/tools/cmd/staticcheck@2022.1",
 		"golang.org/x/tools/cmd/goimports@latest",
 	} {
 		cmd := exec.Command("go", "install", tool)
@@ -376,14 +371,4 @@ func findSubmodules(root, modFlag string) ([]string, error) {
 		return nil, err
 	}
 	return mods, nil
-}
-
-func isGo118() bool {
-	bits, err := exec.Command("go", "version").Output()
-	if err != nil {
-		return false
-	}
-
-	fields := strings.Fields(string(bits))
-	return len(fields) >= 3 && fields[2] == "go1.18"
 }
