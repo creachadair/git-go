@@ -314,7 +314,7 @@ const presubmitConfig = `name: Go presubmit
 on:
   push:
     branches:
-      - default
+      - main
   pull_request:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
