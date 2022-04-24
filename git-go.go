@@ -319,6 +319,8 @@ on:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
 
+permissions: read-all
+
 jobs:
   build:
     name: Go presubmit
