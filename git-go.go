@@ -319,7 +319,8 @@ on:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   build:
