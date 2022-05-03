@@ -336,7 +336,7 @@ jobs:
       with:
         go-version: ${{ matrix.go-version }}
     - uses: actions/checkout@v3
-    - uses: creachadair/go-presubmit-action@default
+    - uses: creachadair/go-presubmit-action@v1
 `
 
 func installPresubmitWorkflow() error {
