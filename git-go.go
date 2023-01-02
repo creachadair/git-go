@@ -56,7 +56,7 @@ while "check -vet" means all the tests except vet.
 
 By default, all submodules are checked. To check only specific submodules, set
 the -mod flag to a comma-separated list of subdirectories of the main module.
-To check only the main module, set -mod="."
+To check only the main module, set -mod=".".
 
 Options:
 `)
@@ -356,18 +356,17 @@ func installPresubmitWorkflow() error {
 }
 
 func findSubmodules(root, modFlag string) ([]string, error) {
-	mods := []string{"."}
-	if modFlag == "" || modFlag == "." {
-		return mods, nil
-	} else if modFlag != "auto" {
-		return append(mods, strings.Split(modFlag, ",")...), nil
+	if modFlag != "" && modFlag != "auto" {
+		return strings.Split(modFlag, ","), nil
 	}
+	var mods []string
 	if err := filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
 		if fi.Mode().IsRegular() && fi.Name() == "go.mod" {
-			dir := filepath.Dir(path)
-			if dir != root {
-				mods = append(mods, strings.TrimPrefix(dir, root+"/"))
+			dir, err := filepath.Rel(root, filepath.Dir(path))
+			if err != nil {
+				return err
 			}
+			mods = append(mods, dir)
 		}
 		return nil
 	}); err != nil {
