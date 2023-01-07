@@ -331,11 +331,12 @@ jobs:
         go-version: ['stable', 'oldstable']
         os: ['ubuntu-latest']
     steps:
+    - uses: actions/checkout@v3
     - name: Install Go ${{ matrix.go-version }}
       uses: actions/setup-go@v3
       with:
         go-version: ${{ matrix.go-version }}
-    - uses: actions/checkout@v3
+        cache: true
     - uses: creachadair/go-presubmit-action@v1
 `
 
