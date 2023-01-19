@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -36,6 +37,7 @@ Subcommands:
   vet           : run "go vet" over all packages
   fmt, format   : run "gofmt -s" over all packages
   static        : run "staticheck" over all packages (if installed)
+  modcheck      : check for problems in go.mod files
   check         : run all the above checks
 
   install-tools : install external commands (staticcheck)
@@ -48,7 +50,7 @@ Subcommands:
                 : install presubmit workflow config in the current repo.
 
 Set GITGO_<tag>=warn to convert failures into warnings, where tag is one of
-  TEST, VET, FMT, STATIC
+  TEST, VET, FMT, STATIC, MODCHECK
 
 When using "presubmit" or "check", additional arguments are added to or removed
 from the base set, e.g., "presubmit static" means fmt, test, vet, and static,
@@ -118,7 +120,7 @@ func gitgo() error {
 		fix := args[1:]
 		switch args[0] {
 		case "check":
-			args = []string{"fmt", "test", "vet", "static"}
+			args = []string{"fmt", "test", "vet", "static", "modcheck"}
 		case "presubmit":
 			args = []string{"fmt", "test", "vet"}
 		}
@@ -161,6 +163,9 @@ func gitgo() error {
 
 				case "fmt", "format":
 					return check("fmt", invoke(runFumpt(mod)))
+
+				case "modcheck":
+					return check("modcheck", modCheck(mod))
 
 				default:
 					return fmt.Errorf("subcommand %q not understood", arg)
@@ -234,19 +239,43 @@ fi
 	return cmd
 }
 
+type modPath struct {
+	Path string `json:"path"`
+}
+
+type jsonMod struct {
+	Module  modPath `json:"module"`
+	Replace []struct {
+		Old modPath `json:"old"`
+		New modPath `json:"new"`
+	}
+}
+
+func modCheck(path string) error {
+	fmt.Fprintf(out, "▷ \033[1;36m%s\033[0m\n", "check go.mod structure")
+	cmd := exec.Command("go", "mod", "edit", "-json")
+	cmd.Dir = path
+	data, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+	var jm jsonMod
+	if err := json.Unmarshal(data, &jm); err != nil {
+		return fmt.Errorf("decoding go.mod: %w", err)
+	}
+	if len(jm.Replace) != 0 {
+		fmt.Fprintln(out, "  \033[1;33mReplace directives found:\033[0m")
+		for _, rep := range jm.Replace {
+			fmt.Fprintf(out, "   - %s -> %s\n", rep.Old.Path, rep.New.Path)
+		}
+		return checkError("replace directives in go.mod")
+	}
+	return nil
+}
+
 func invoke(cmd *exec.Cmd) error {
 	fmt.Fprintf(out, "▷ \033[1;36m%s\033[0m\n", strings.Join(cmd.Args, " "))
-	err := cmd.Run()
-	switch t := err.(type) {
-	case nil:
-		fmt.Fprintln(out, "\033[50C\033[1;32mPASSED\033[0m")
-	case *exec.Error:
-		fmt.Fprintf(out, "\033[50C\033[1;33mSKIPPED\033[0m (%v)\n", t)
-		return nil
-	default:
-		fmt.Fprintln(out, "\033[50C\033[1;31mFAILED\033[0m")
-	}
-	return err
+	return cmd.Run()
 }
 
 func writeHook(path, subcommand, modFlag string) error {
@@ -287,10 +316,21 @@ func tagMode(tag string) string {
 }
 
 func check(tag string, err error) error {
-	if _, ok := err.(*exec.ExitError); ok && tagMode(tag) == "warn" {
-		fmt.Fprintf(out, "\t[NOTE] \033[1;33mIgnoring %[1]s failure "+
-			"because %[1]s mode is \"warn\"\033[0m\n", tag)
-		return nil
+	switch t := err.(type) {
+	case nil:
+		fmt.Fprintln(out, "\033[50C\033[1;32mPASSED\033[0m")
+	case *exec.Error:
+		fmt.Fprintf(out, "\033[50C\033[1;33mSKIPPED\033[0m (%v)\n", t)
+	default:
+		fmt.Fprintln(out, "\033[50C\033[1;31mFAILED\033[0m")
+	}
+	switch err.(type) {
+	case *exec.ExitError, checkError:
+		if tagMode(tag) == "warn" {
+			fmt.Fprintf(out, "\t[NOTE] \033[1;33mIgnoring %[1]s failure "+
+				"because %[1]s mode is \"warn\"\033[0m\n", tag)
+			return nil
+		}
 	}
 	return err
 }
@@ -375,3 +415,7 @@ func findSubmodules(root, modFlag string) ([]string, error) {
 	}
 	return mods, nil
 }
+
+type checkError string
+
+func (c checkError) Error() string { return string(c) }
