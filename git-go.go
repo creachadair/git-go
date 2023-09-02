@@ -368,7 +368,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        go-version: ['stable', 'oldstable']
+        go-version: ['stable']
         os: ['ubuntu-latest']
     steps:
     - uses: actions/checkout@v3
@@ -376,7 +376,7 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: ${{ matrix.go-version }}
-    - uses: creachadair/go-presubmit-action@v1
+    - uses: creachadair/go-presubmit-action@v2
 `
 
 func installPresubmitWorkflow() error {
