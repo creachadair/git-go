@@ -39,6 +39,7 @@ Subcommands:
   static        : run "staticheck" over all packages (if installed)
   modcheck      : check for problems in go.mod files
   check         : run all the above checks
+  check-once    : as "check", but limited to one CPU setting
 
   install-tools : install external commands (staticcheck)
 
@@ -121,6 +122,8 @@ func gitgo() error {
 		switch args[0] {
 		case "check":
 			args = []string{"fmt", "test", "vet", "static", "modcheck"}
+		case "check-once":
+			args = []string{"fmt", "test-once", "vet", "static", "modcheck"}
 		case "presubmit":
 			args = []string{"fmt", "test", "vet"}
 		}
