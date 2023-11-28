@@ -19,7 +19,8 @@ import (
 )
 
 var (
-	modDirs = flag.String("mod", "auto", "Module paths relative to repository root")
+	modDirs   = flag.String("mod", "auto", "Module paths relative to repository root")
+	singleCPU = flag.Bool("single", false, "Use only one CPU setting when testing")
 
 	out = os.Stdout
 )
@@ -39,7 +40,6 @@ Subcommands:
   static        : run "staticheck" over all packages (if installed)
   modcheck      : check for problems in go.mod files
   check         : run all the above checks
-  check-once    : as "check", but limited to one CPU setting
 
   install-tools : install external commands (staticcheck)
 
@@ -119,13 +119,15 @@ func gitgo() error {
 	args := flag.Args()
 	if len(args) >= 1 {
 		fix := args[1:]
+		testName := "test"
+		if *singleCPU {
+			testName = "test-once"
+		}
 		switch args[0] {
 		case "check":
-			args = []string{"fmt", "test", "vet", "static", "modcheck"}
-		case "check-once":
-			args = []string{"fmt", "test-once", "vet", "static", "modcheck"}
+			args = []string{"fmt", testName, "vet", "static", "modcheck"}
 		case "presubmit":
-			args = []string{"fmt", "test", "vet"}
+			args = []string{"fmt", testName, "vet"}
 		}
 		for _, arg := range fix {
 			update(&args, arg)
