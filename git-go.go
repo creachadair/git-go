@@ -47,8 +47,8 @@ Subcommands:
                 : install pre-push hook in the current repo.
                   subcommand defaults to "presubmit"
 
-  install-presubmit-workflow
-                : install presubmit workflow config in the current repo.
+  install-ci-workflow
+                : install CI workflow config in the current repo.
 
 Set GITGO_<tag>=warn to convert failures into warnings, where tag is one of
   TEST, VET, FMT, STATIC, MODCHECK
@@ -97,7 +97,7 @@ func gitgo() error {
 		}
 	} else if flag.Arg(0) == "install-tools" {
 		return installTools()
-	} else if flag.Arg(0) == "install-presubmit-workflow" {
+	} else if flag.Arg(0) == "install-ci-workflow" {
 		return installPresubmitWorkflow()
 	} else if flag.Arg(0) == "help" {
 		flag.Usage()
@@ -387,7 +387,7 @@ jobs:
 func installPresubmitWorkflow() error {
 	path := filepath.Join(".github/workflows/go-presubmit.yml")
 	if _, err := os.Stat(path); err == nil {
-		return errors.New("presubmit workflow is already installed")
+		return errors.New("CI workflow is already installed")
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
