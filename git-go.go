@@ -299,7 +299,7 @@ git go %s%s
 
 func installTools() error {
 	for _, tool := range []string{
-		"honnef.co/go/tools/cmd/staticcheck@v0.5.1",
+		"honnef.co/go/tools/cmd/staticcheck@v0.6.0",
 		"golang.org/x/tools/cmd/goimports@latest",
 	} {
 		cmd := exec.Command("go", "install", tool)
