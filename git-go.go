@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	_ "embed"
+
 	"github.com/creachadair/ctrl"
 )
 
@@ -354,35 +356,8 @@ func update(args *[]string, arg string) {
 	*args = append(*args, trim)
 }
 
-const presubmitConfig = `name: Go presubmit
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    types: [opened, reopened, synchronize]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-jobs:
-  build:
-    name: Go presubmit
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        go-version: ['stable']
-        os: ['ubuntu-24.04']
-    steps:
-    - uses: actions/checkout@v4
-    - name: Install Go ${{ matrix.go-version }}
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ matrix.go-version }}
-    - uses: creachadair/go-presubmit-action@v2
-`
+//go:embed ci-workflow.yml
+var presubmitConfig string
 
 func installPresubmitWorkflow() error {
 	path := filepath.Join(".github/workflows/go-presubmit.yml")
