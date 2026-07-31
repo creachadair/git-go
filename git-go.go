@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	_ "embed"
@@ -226,7 +227,18 @@ func runTestsOnce(path string) *exec.Cmd { return gocmd(path, "test", "-race", "
 
 func runVet(path string) *exec.Cmd { return gocmd(path, "vet", "./...") }
 
-func runStatic(path string) *exec.Cmd { return runcmd("staticcheck", path, "./...") }
+func runStatic(path string) *exec.Cmd {
+	// If the module declares staticcheck as a tool dependency, use it at the
+	// pinned version (via go run). Otherwise, use an ambient installation.
+	const toolDep = "(?ms)^tool .*honnef.co/go/tools/staticcheck$"
+	modPath := filepath.Join(path, "go.mod")
+	if mod, err := os.ReadFile(modPath); err == nil {
+		if ok, _ := regexp.Match(toolDep, mod); ok {
+			return gocmd(path, "run", "honnef.co/go/tools/cmd/staticcheck", "./...")
+		}
+	}
+	return runcmd("staticcheck", path, "./...")
+}
 
 func runFumpt(path string) *exec.Cmd {
 	const script = `find . -type f -name '*.go' -print0 \
